@@ -26,11 +26,37 @@ document.addEventListener("DOMContentLoaded", () => {
           participantsHTML = `
             <div class="participants-section">
               <strong>Participants:</strong>
-              <ul class="participants-list">
-                ${details.participants.map(email => `<li>${email}</li>`).join("")}
+              <ul class="participants-list" style="list-style-type: none; padding-left: 0;">
+                ${details.participants.map(email => `
+                  <li style="display: flex; align-items: center;">
+                    <span>${email}</span>
+                    <span title="Eliminar participante" style="cursor:pointer; margin-left:8px; color:#c00;" onclick="unregisterParticipant('${name}','${email}')">🗑️</span>
+                  </li>
+                `).join("")}
               </ul>
             </div>
           `;
+        // Eliminar participante de la actividad (requiere endpoint DELETE en backend)
+        window.unregisterParticipant = async function(activityName, email) {
+          if (!confirm(`¿Eliminar a ${email} de la actividad ${activityName}?`)) return;
+          try {
+            const response = await fetch(`/activities/${encodeURIComponent(activityName)}/unregister?email=${encodeURIComponent(email)}`, {
+              method: "DELETE"
+            });
+            const result = await response.json();
+            if (response.ok) {
+              alert(result.message || "Participante eliminado");
+              // Recargar actividades para actualizar la lista
+              document.getElementById("activities-list").innerHTML = "Cargando...";
+              fetchActivities();
+            } else {
+              alert(result.detail || "No se pudo eliminar el participante");
+            }
+          } catch (error) {
+            alert("Error eliminando participante");
+            console.error(error);
+          }
+        }
         } else {
           participantsHTML = `
             <div class="participants-section no-participants">
@@ -82,6 +108,9 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        // Actualizar la lista de actividades automáticamente
+        activitiesList.innerHTML = "Cargando...";
+        fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
